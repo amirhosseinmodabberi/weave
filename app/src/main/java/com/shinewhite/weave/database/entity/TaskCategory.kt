@@ -6,5 +6,14 @@ enum class TaskCategory {
     SCHOOL,
     READING,
     WORK,
+    COOKING,
+    SHOPPING,
+    MUSIC,
+    SLEEP,
+    HEALTH,
+    FRIENDS,
+    GAMING,
+    OUTDOORS,
+    CLEANING,
     OTHER
 }

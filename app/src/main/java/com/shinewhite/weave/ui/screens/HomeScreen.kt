@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shinewhite.weave.database.entity.NoteEntity
@@ -36,10 +40,14 @@ import java.util.Locale
 
 // viewModel() is used instead of hiltViewModel() because the hilt-navigation-compose dependency is not added
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(onAddTaskClick: () -> Unit, viewModel: HomeViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.refreshData() }
+
     HomeScreenContent(
         uiState = uiState,
+        onAddTaskClick = onAddTaskClick,
         onToggleTask = viewModel::toggleTask,
         onAddNote = viewModel::addNote,
         onRetry = viewModel::loadData
@@ -49,6 +57,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState,
+    onAddTaskClick: () -> Unit,
     onToggleTask: (taskId: Long, epochDay: Long, done: Boolean) -> Unit,
     onAddNote: (String) -> Unit,
     onRetry: () -> Unit
@@ -79,80 +88,93 @@ fun HomeScreenContent(
 
             is HomeUiState.Success -> {
                 val sidePadding = Modifier.padding(horizontal = Dimens.paddingLarge)
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .systemBarsPadding(),
-                    contentPadding = PaddingValues(vertical = Dimens.paddingLarge),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.paddingLarge)
-                ) {
-                    item {
-                        Column(modifier = sidePadding) {
-                            Text(
-                                text = todayLabel(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .systemBarsPadding(),
+                        contentPadding = PaddingValues(top = Dimens.paddingLarge, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.paddingLarge)
+                    ) {
+                        item {
+                            Column(modifier = sidePadding) {
+                                Text(
+                                    text = todayLabel(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = greetingForNow(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                        item {
+                            TodayCarousel(
+                                tasks = uiState.todayTasks,
+                                isDone = { uiState.isDone(it.id, uiState.todayEpochDay) },
+                                onToggle = { task, done ->
+                                    onToggleTask(
+                                        task.id,
+                                        uiState.todayEpochDay,
+                                        done
+                                    )
+                                }
                             )
-                            Text(
-                                text = greetingForNow(),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
+                        }
+                        item { SectionTitle("My week", sidePadding) }
+                        item {
+                            WeekTable(
+                                state = uiState,
+                                onToggle = onToggleTask,
+                                modifier = sidePadding
+                            )
+                        }
+                        item { SectionTitle("Today's checklist", sidePadding) }
+                        item {
+                            TodayChecklist(
+                                state = uiState,
+                                onToggle = onToggleTask,
+                                modifier = sidePadding
+                            )
+                        }
+                        item { SectionTitle("Notes", sidePadding) }
+                        item {
+                            NotesSection(
+                                notes = uiState.notes,
+                                onAddNote = onAddNote,
+                                modifier = sidePadding
+                            )
+                        }
+                        item { SectionTitle("Daily progress", sidePadding) }
+                        item {
+                            DailyProgressCard(
+                                done = uiState.doneTodayCount,
+                                total = uiState.todayTasks.size,
+                                modifier = sidePadding
+                            )
+                        }
+                        item { SectionTitle("Weekly statistics", sidePadding) }
+                        item {
+                            WeeklyStatsCard(
+                                counts = (0..6).map { uiState.completedCountOn(it) },
+                                todayIndex = uiState.todayIndex,
+                                modifier = sidePadding
                             )
                         }
                     }
-                    item {
-                        TodayCarousel(
-                            tasks = uiState.todayTasks,
-                            isDone = { uiState.isDone(it.id, uiState.todayEpochDay) },
-                            onToggle = { task, done ->
-                                onToggleTask(
-                                    task.id,
-                                    uiState.todayEpochDay,
-                                    done
-                                )
-                            }
-                        )
-                    }
-                    item { SectionTitle("My week", sidePadding) }
-                    item {
-                        WeekTable(
-                            state = uiState,
-                            onToggle = onToggleTask,
-                            modifier = sidePadding
-                        )
-                    }
-                    item { SectionTitle("Today's checklist", sidePadding) }
-                    item {
-                        TodayChecklist(
-                            state = uiState,
-                            onToggle = onToggleTask,
-                            modifier = sidePadding
-                        )
-                    }
-                    item { SectionTitle("Notes", sidePadding) }
-                    item {
-                        NotesSection(
-                            notes = uiState.notes,
-                            onAddNote = onAddNote,
-                            modifier = sidePadding
-                        )
-                    }
-                    item { SectionTitle("Daily progress", sidePadding) }
-                    item {
-                        DailyProgressCard(
-                            done = uiState.doneTodayCount,
-                            total = uiState.todayTasks.size,
-                            modifier = sidePadding
-                        )
-                    }
-                    item { SectionTitle("Weekly statistics", sidePadding) }
-                    item {
-                        WeeklyStatsCard(
-                            counts = (0..6).map { uiState.completedCountOn(it) },
-                            todayIndex = uiState.todayIndex,
-                            modifier = sidePadding
-                        )
+                    FloatingActionButton(
+                        onClick = onAddTaskClick,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .systemBarsPadding()
+                            .padding(Dimens.paddingLarge),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Icon(imageVector = WeaveIcons.Plus, contentDescription = "Add task")
                     }
                 }
             }
@@ -213,6 +235,7 @@ private fun HomeScreenPreview() {
     AppTheme {
         HomeScreenContent(
             uiState = previewState(),
+            onAddTaskClick = {},
             onToggleTask = { _, _, _ -> },
             onAddNote = {},
             onRetry = {}
@@ -226,6 +249,7 @@ private fun HomeScreenEmptyPreview() {
     AppTheme {
         HomeScreenContent(
             uiState = HomeUiState.Success(),
+            onAddTaskClick = {},
             onToggleTask = { _, _, _ -> },
             onAddNote = {},
             onRetry = {}

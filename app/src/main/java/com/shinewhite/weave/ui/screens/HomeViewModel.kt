@@ -36,14 +36,18 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isRefreshing.value = true
+            fetchAll()
+            _isRefreshing.value = false
+        }
+    }
 
-            taskRepository.getAllTasks()
-                .onSuccess { tasks -> updateSuccess { it.copy(tasks = tasks) } }
-                .onFailure { _uiState.value = HomeUiState.Error(it) }
+    // Reloads without showing the Loading state, used when returning to the screen
+    fun refreshData() {
+        if (_isRefreshing.value) return
 
-            refreshCompletions()
-            refreshNotes()
-
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            fetchAll()
             _isRefreshing.value = false
         }
     }
@@ -65,6 +69,15 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { refreshNotes() }
                 .onFailure { _uiState.value = HomeUiState.Error(it) }
         }
+    }
+
+    private suspend fun fetchAll() {
+        taskRepository.getAllTasks()
+            .onSuccess { tasks -> updateSuccess { it.copy(tasks = tasks) } }
+            .onFailure { _uiState.value = HomeUiState.Error(it) }
+
+        refreshCompletions()
+        refreshNotes()
     }
 
     private suspend fun refreshCompletions() {

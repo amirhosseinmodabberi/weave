@@ -30,6 +30,10 @@ class AddTaskViewModel @Inject constructor(
         _uiState.update { it.copy(category = category) }
     }
 
+    fun onTimeChange(minutes: Int?) {
+        _uiState.update { it.copy(timeMinutes = minutes) }
+    }
+
     fun onDayToggle(dayIndex: Int) {
         _uiState.update { it.copy(activeDaysMask = it.activeDaysMask xor (1 shl dayIndex)) }
     }

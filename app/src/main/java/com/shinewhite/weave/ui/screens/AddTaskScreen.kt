@@ -21,15 +21,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +77,7 @@ fun AddTaskScreen(taskId: Long?, onBack: () -> Unit, viewModel: AddTaskViewModel
         onTitleChange = viewModel::onTitleChange,
         onCategoryChange = viewModel::onCategoryChange,
         onDayToggle = viewModel::onDayToggle,
+        onTimeChange = viewModel::onTimeChange,
         onSave = viewModel::saveTask
     )
 }
@@ -83,8 +89,22 @@ fun AddTaskScreenContent(
     onTitleChange: (String) -> Unit,
     onCategoryChange: (TaskCategory) -> Unit,
     onDayToggle: (Int) -> Unit,
+    onTimeChange: (Int?) -> Unit,
     onSave: () -> Unit
 ) {
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        TimePickerDialog(
+            initialMinutes = uiState.timeMinutes,
+            onConfirm = {
+                onTimeChange(it)
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false }
+        )
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -149,6 +169,12 @@ fun AddTaskScreenContent(
                         }
                     }
                 }
+
+                TimeField(
+                    timeMinutes = uiState.timeMinutes,
+                    onClick = { showTimePicker = true },
+                    onClear = { onTimeChange(null) }
+                )
 
                 uiState.errorMessage?.let {
                     Text(
@@ -250,6 +276,74 @@ private fun CategoryDropdown(selected: TaskCategory, onSelected: (TaskCategory) 
 }
 
 @Composable
+private fun TimeField(timeMinutes: Int?, onClick: () -> Unit, onClear: () -> Unit) {
+    val shape = RoundedCornerShape(Dimens.cornerRadius)
+
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.paddingSmall)) {
+        Text(
+            text = "Time (optional)",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(Dimens.buttonHeight)
+                    .clip(shape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, shape)
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .padding(horizontal = Dimens.paddingMedium),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = WeaveIcons.Clock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Text(
+                    text = timeMinutes?.let { formatTime(it) } ?: "No time set",
+                    modifier = Modifier.padding(start = Dimens.paddingMedium),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (timeMinutes == null) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onBackground
+                    }
+                )
+            }
+            if (timeMinutes != null) {
+                TextButton(onClick = onClear) { Text("Clear") }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(initialMinutes: Int?, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
+    val initial = initialMinutes ?: (9 * 60)
+    val pickerState = rememberTimePickerState(
+        initialHour = initial / 60,
+        initialMinute = initial % 60,
+        is24Hour = false
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pickerState.hour * 60 + pickerState.minute) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+        text = { TimePicker(state = pickerState) }
+    )
+}
+
+@Composable
 private fun DayChip(label: String, selected: Boolean, onToggle: () -> Unit) {
     val shape = RoundedCornerShape(Dimens.cornerRadius)
     Box(
@@ -294,12 +388,14 @@ private fun AddTaskScreenPreview() {
             uiState = AddTaskUiState(
                 title = "Morning workout",
                 category = TaskCategory.GYM,
-                activeDaysMask = 0b0010101
+                activeDaysMask = 0b0010101,
+                timeMinutes = 7 * 60
             ),
             onBack = {},
             onTitleChange = {},
             onCategoryChange = {},
             onDayToggle = {},
+            onTimeChange = {},
             onSave = {}
         )
     }

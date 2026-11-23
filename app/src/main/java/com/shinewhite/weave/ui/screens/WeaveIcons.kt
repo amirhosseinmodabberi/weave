@@ -33,6 +33,7 @@ object WeaveIcons {
     val Plus = strokeIcon("Plus", "M12 5v14M5 12h14")
     val Back = strokeIcon("Back", "M15 5l-7 7 7 7")
     val ChevronDown = strokeIcon("ChevronDown", "M6 9l6 6 6-6")
+    val Clock = strokeIcon("Clock", "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0", "M12 7v5l3 2")
     val Edit = strokeIcon("Edit", "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z", "M13.5 6.5l4 4")
     val Delete = strokeIcon(
         "Delete",

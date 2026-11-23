@@ -12,6 +12,9 @@ class TaskRepository @Inject constructor(
     suspend fun getAllTasks(): Result<List<TaskEntity>> =
         runCatching { taskDao.getAllTasks() }
 
+    suspend fun getTask(taskId: Long): Result<TaskEntity?> =
+        runCatching { taskDao.getTaskById(taskId) }
+
     suspend fun getTasksForDay(epochDay: Long): Result<List<TaskEntity>> =
         runCatching { taskDao.getTasksActiveOnDay(1 shl EpochDay.dayIndex(epochDay)) }
 

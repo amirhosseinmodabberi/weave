@@ -10,15 +10,30 @@ import com.shinewhite.weave.ui.screens.HomeScreen
 
 enum class Destination {
     HOME,
-    ADD_TASK
+    TASK_FORM
 }
 
 @Composable
 fun WeaveApp() {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
+    // null means a new task is being created, otherwise this task is being edited
+    var editingTaskId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     when (destination) {
-        Destination.HOME -> HomeScreen(onAddTaskClick = { destination = Destination.ADD_TASK })
-        Destination.ADD_TASK -> AddTaskScreen(onBack = { destination = Destination.HOME })
+        Destination.HOME -> HomeScreen(
+            onAddTaskClick = {
+                editingTaskId = null
+                destination = Destination.TASK_FORM
+            },
+            onEditTask = { taskId ->
+                editingTaskId = taskId
+                destination = Destination.TASK_FORM
+            }
+        )
+
+        Destination.TASK_FORM -> AddTaskScreen(
+            taskId = editingTaskId,
+            onBack = { destination = Destination.HOME }
+        )
     }
 }

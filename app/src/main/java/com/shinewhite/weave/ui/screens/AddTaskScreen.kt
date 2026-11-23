@@ -53,13 +53,14 @@ import com.shinewhite.weave.ui.theme.Dimens
 private val DAY_SHORT_LABELS = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
 
 @Composable
-fun AddTaskScreen(onBack: () -> Unit, viewModel: AddTaskViewModel = viewModel()) {
+fun AddTaskScreen(taskId: Long?, onBack: () -> Unit, viewModel: AddTaskViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val goBack = {
         viewModel.resetForm()
         onBack()
     }
 
+    LaunchedEffect(taskId) { viewModel.startForm(taskId) }
     BackHandler(onBack = goBack)
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) goBack()
@@ -101,7 +102,7 @@ fun AddTaskScreenContent(
                     )
                 }
                 Text(
-                    text = "New task",
+                    text = if (uiState.isEditing) "Edit task" else "New task",
                     modifier = Modifier.padding(start = Dimens.paddingSmall),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground
@@ -166,7 +167,13 @@ fun AddTaskScreenContent(
                     .height(Dimens.buttonHeight),
                 shape = RoundedCornerShape(Dimens.cornerRadius)
             ) {
-                Text(if (uiState.isSaving) "Saving..." else "Save task")
+                Text(
+                    when {
+                        uiState.isSaving -> "Saving..."
+                        uiState.isEditing -> "Save changes"
+                        else -> "Save task"
+                    }
+                )
             }
             Spacer(Modifier.height(Dimens.paddingMedium))
         }

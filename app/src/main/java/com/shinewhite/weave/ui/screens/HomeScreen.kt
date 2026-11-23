@@ -1,7 +1,6 @@
 package com.shinewhite.weave.ui.screens
 
 import android.content.res.Configuration
-import kotlin.time.Duration.Companion.seconds
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +43,11 @@ import java.util.Locale
 
 // viewModel() is used instead of hiltViewModel() because the hilt-navigation-compose dependency is not added
 @Composable
-fun HomeScreen(onAddTaskClick: () -> Unit, viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    onAddTaskClick: () -> Unit,
+    onEditTask: (Long) -> Unit,
+    viewModel: HomeViewModel = viewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.refreshData() }
@@ -49,6 +55,8 @@ fun HomeScreen(onAddTaskClick: () -> Unit, viewModel: HomeViewModel = viewModel(
     HomeScreenContent(
         uiState = uiState,
         onAddTaskClick = onAddTaskClick,
+        onEditTask = onEditTask,
+        onDeleteTask = viewModel::deleteTask,
         onToggleTask = viewModel::toggleTask,
         onAddNote = viewModel::addNote,
         onRetry = viewModel::loadData
@@ -59,6 +67,8 @@ fun HomeScreen(onAddTaskClick: () -> Unit, viewModel: HomeViewModel = viewModel(
 fun HomeScreenContent(
     uiState: HomeUiState,
     onAddTaskClick: () -> Unit,
+    onEditTask: (Long) -> Unit,
+    onDeleteTask: (Long) -> Unit,
     onToggleTask: (taskId: Long, epochDay: Long, done: Boolean) -> Unit,
     onAddNote: (String) -> Unit,
     onRetry: () -> Unit
@@ -89,6 +99,19 @@ fun HomeScreenContent(
 
             is HomeUiState.Success -> {
                 val sidePadding = Modifier.padding(horizontal = Dimens.paddingLarge)
+                var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+
+                taskToDelete?.let { pending ->
+                    DeleteTaskDialog(
+                        task = pending,
+                        onConfirm = {
+                            onDeleteTask(pending.id)
+                            taskToDelete = null
+                        },
+                        onDismiss = { taskToDelete = null }
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         modifier = Modifier
@@ -116,13 +139,9 @@ fun HomeScreenContent(
                             TodayCarousel(
                                 tasks = uiState.todayTasks,
                                 isDone = { uiState.isDone(it.id, uiState.todayEpochDay) },
-                                onToggle = { task, done ->
-                                    onToggleTask(
-                                        task.id,
-                                        uiState.todayEpochDay,
-                                        done
-                                    )
-                                }
+                                onToggle = { task, done -> onToggleTask(task.id, uiState.todayEpochDay, done) },
+                                onEdit = { onEditTask(it.id) },
+                                onDelete = { taskToDelete = it }
                             )
                         }
                         item { SectionTitle("My week", sidePadding) }
@@ -130,6 +149,8 @@ fun HomeScreenContent(
                             WeekTable(
                                 state = uiState,
                                 onToggle = onToggleTask,
+                                onEdit = { onEditTask(it.id) },
+                                onDelete = { taskToDelete = it },
                                 modifier = sidePadding
                             )
                         }
@@ -138,17 +159,13 @@ fun HomeScreenContent(
                             TodayChecklist(
                                 state = uiState,
                                 onToggle = onToggleTask,
+                                onEdit = { onEditTask(it.id) },
+                                onDelete = { taskToDelete = it },
                                 modifier = sidePadding
                             )
                         }
                         item { SectionTitle("Notes", sidePadding) }
-                        item {
-                            NotesSection(
-                                notes = uiState.notes,
-                                onAddNote = onAddNote,
-                                modifier = sidePadding
-                            )
-                        }
+                        item { NotesSection(notes = uiState.notes, onAddNote = onAddNote, modifier = sidePadding) }
                         item { SectionTitle("Daily progress", sidePadding) }
                         item {
                             DailyProgressCard(
@@ -237,6 +254,8 @@ private fun HomeScreenPreview() {
         HomeScreenContent(
             uiState = previewState(),
             onAddTaskClick = {},
+            onEditTask = {},
+            onDeleteTask = {},
             onToggleTask = { _, _, _ -> },
             onAddNote = {},
             onRetry = {}
@@ -251,6 +270,8 @@ private fun HomeScreenEmptyPreview() {
         HomeScreenContent(
             uiState = HomeUiState.Success(),
             onAddTaskClick = {},
+            onEditTask = {},
+            onDeleteTask = {},
             onToggleTask = { _, _, _ -> },
             onAddNote = {},
             onRetry = {}

@@ -22,6 +22,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY id")
     suspend fun getAllTasks(): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks WHERE id = :taskId")
+    suspend fun getTaskById(taskId: Long): TaskEntity?
+
     @Query("SELECT * FROM tasks WHERE (activeDaysMask & :dayBit) != 0 ORDER BY timeMinutes IS NULL, timeMinutes, id")
     suspend fun getTasksActiveOnDay(dayBit: Int): List<TaskEntity>
 

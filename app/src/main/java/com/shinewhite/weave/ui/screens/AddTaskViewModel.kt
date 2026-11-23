@@ -42,16 +42,45 @@ class AddTaskViewModel @Inject constructor(
 
         viewModelScope.launch {
             val task = TaskEntity(
+                id = current.editingTaskId ?: 0,
                 title = current.title.trim(),
                 category = current.category,
-                activeDaysMask = current.activeDaysMask
+                activeDaysMask = current.activeDaysMask,
+                timeMinutes = current.timeMinutes
             )
-            taskRepository.addTask(task)
+            val result = if (current.editingTaskId == null) {
+                taskRepository.addTask(task).map { }
+            } else {
+                taskRepository.updateTask(task)
+            }
+            result
                 .onSuccess { _uiState.update { state -> state.copy(isSaving = false, isSaved = true) } }
                 .onFailure {
                     _uiState.update { state ->
                         state.copy(isSaving = false, errorMessage = "Could not save the task")
                     }
+                }
+        }
+    }
+
+    fun startForm(taskId: Long?) {
+        if (taskId == null || _uiState.value.editingTaskId == taskId) return
+
+        viewModelScope.launch {
+            taskRepository.getTask(taskId)
+                .onSuccess { task ->
+                    if (task != null) {
+                        _uiState.value = AddTaskUiState(
+                            title = task.title,
+                            category = task.category,
+                            activeDaysMask = task.activeDaysMask,
+                            timeMinutes = task.timeMinutes,
+                            editingTaskId = task.id
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { state -> state.copy(errorMessage = "Could not load the task") }
                 }
         }
     }
@@ -66,9 +95,12 @@ data class AddTaskUiState(
     val title: String = "",
     val category: TaskCategory = TaskCategory.OTHER,
     val activeDaysMask: Int = EVERY_DAY_MASK,
+    val timeMinutes: Int? = null,
+    val editingTaskId: Long? = null,
     val isSaving: Boolean = false,
     val isSaved: Boolean = false,
     val errorMessage: String? = null
 ) {
+    val isEditing: Boolean get() = editingTaskId != null
     val canSave: Boolean get() = title.isNotBlank() && activeDaysMask != 0 && !isSaving
 }

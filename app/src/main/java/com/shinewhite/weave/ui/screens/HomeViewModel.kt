@@ -52,6 +52,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun deleteTask(taskId: Long) {
+        viewModelScope.launch {
+            taskRepository.deleteTask(taskId)
+                .onSuccess { fetchAll() }
+                .onFailure { _uiState.value = HomeUiState.Error(it) }
+        }
+    }
+
     fun toggleTask(taskId: Long, epochDay: Long, done: Boolean) {
         viewModelScope.launch {
             taskRepository.setTaskDone(taskId, epochDay, done)

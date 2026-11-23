@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.shinewhite.weave.ui.navigation.WeaveApp
-import com.shinewhite.weave.ui.screens.HomeScreen
 import com.shinewhite.weave.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 

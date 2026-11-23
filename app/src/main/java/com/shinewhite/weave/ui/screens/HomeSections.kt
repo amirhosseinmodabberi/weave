@@ -51,8 +51,9 @@ import com.shinewhite.weave.database.entity.TaskEntity
 import com.shinewhite.weave.ui.theme.Dimens
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 
-private const val AUTO_SCROLL_DELAY_MS = 4_000L
+private val AUTO_SCROLL_DELAY = 4.seconds
 private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 private val MAX_BAR_HEIGHT = 100.dp
 
@@ -141,10 +142,11 @@ internal fun TodayCarousel(
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
     // Auto-advance is paused while the user is dragging the carousel
-    LaunchedEffect(pagerState.currentPage, isDragged, tasks.size) {
+    // settledPage changes only after the animation ends, so it is not cancelled halfway
+    LaunchedEffect(pagerState.settledPage, isDragged, tasks.size) {
         if (!isDragged && tasks.size > 1) {
-            delay(AUTO_SCROLL_DELAY_MS)
-            pagerState.animateScrollToPage((pagerState.currentPage + 1) % tasks.size)
+            delay(AUTO_SCROLL_DELAY)
+            pagerState.animateScrollToPage((pagerState.settledPage + 1) % tasks.size)
         }
     }
 

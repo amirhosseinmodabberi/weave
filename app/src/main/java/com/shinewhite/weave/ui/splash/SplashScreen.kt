@@ -27,26 +27,26 @@ private const val LOGO_STROKE_DP = 1.8f
 
 @Composable
 fun SplashScreen(
-    onFadeOutStart: () -> Unit,
+    animationState: SplashAnimationState,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val animationState = remember { SplashAnimationState() }
-    val currentOnFadeOutStart by rememberUpdatedState(onFadeOutStart)
     val currentOnFinished by rememberUpdatedState(onFinished)
 
     // Keyed on the remembered state, so ordinary recompositions never restart the animation
     LaunchedEffect(animationState) {
-        animationState.play(onFadeOutStart = { currentOnFadeOutStart() })
+        animationState.play()
         currentOnFinished()
     }
 
     SplashContent(
         backgroundAlpha = { animationState.backgroundAlpha.value },
         drawProgress = { animationState.drawProgress.value },
-        overallAlpha = { animationState.overallAlpha.value },
         palette = splashPalette(),
-        modifier = modifier
+        modifier = modifier.blurredFade(
+            alpha = { 1f - animationState.transition.value },
+            blurFraction = { animationState.transition.value }
+        )
     )
 }
 
@@ -54,7 +54,6 @@ fun SplashScreen(
 internal fun SplashContent(
     backgroundAlpha: () -> Float,
     drawProgress: () -> Float,
-    overallAlpha: () -> Float,
     palette: SplashPalette,
     modifier: Modifier = Modifier
 ) {
@@ -69,8 +68,7 @@ internal fun SplashContent(
             .fillMaxSize()
             .semantics { contentDescription = "Weave" }
     ) {
-        val alpha = overallAlpha()
-        drawRect(color = palette.background.copy(alpha = (backgroundAlpha() * alpha).coerceIn(0f, 1f)))
+        drawRect(color = palette.background.copy(alpha = backgroundAlpha().coerceIn(0f, 1f)))
 
         val logoWidth = minOf(size.width * LOGO_WIDTH_FRACTION, LOGO_MAX_WIDTH_DP.dp.toPx())
         val scale = logoWidth / WeaveLogoPath.WIDTH
@@ -86,7 +84,7 @@ internal fun SplashContent(
         }) {
             drawPath(
                 path = revealedPath,
-                color = palette.logo.copy(alpha = alpha),
+                color = palette.logo,
                 style = Stroke(
                     width = LOGO_STROKE_DP.dp.toPx() / scale,
                     cap = StrokeCap.Round,
@@ -104,7 +102,6 @@ private fun SplashScreenCompletePreview() {
     SplashContent(
         backgroundAlpha = { 1f },
         drawProgress = { 1f },
-        overallAlpha = { 1f },
         palette = splashPalette()
     )
 }
@@ -115,7 +112,6 @@ private fun SplashScreenWritingPreview() {
     SplashContent(
         backgroundAlpha = { 1f },
         drawProgress = { 0.55f },
-        overallAlpha = { 1f },
         palette = splashPalette()
     )
 }

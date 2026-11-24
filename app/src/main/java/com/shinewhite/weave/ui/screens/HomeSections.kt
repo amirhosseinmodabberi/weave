@@ -464,16 +464,25 @@ internal fun TodayChecklist(
                                     .padding(horizontal = Dimens.paddingSmall),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = task.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
-                                    color = if (done) {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
+                                Column {
+                                    Text(
+                                        text = task.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
+                                        color = if (done) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                    task.timeMinutes?.let {
+                                        Text(
+                                            text = formatTime(it),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
-                                )
+                                }
                             }
                             TaskActionsMenu(
                                 expanded = menuOpen,

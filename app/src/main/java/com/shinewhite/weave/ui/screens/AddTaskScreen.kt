@@ -1,7 +1,15 @@
 package com.shinewhite.weave.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,14 +52,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shinewhite.weave.database.entity.TaskCategory
+import com.shinewhite.weave.reminder.ReminderPermissions
 import com.shinewhite.weave.ui.theme.AppTheme
 import com.shinewhite.weave.ui.theme.Dimens
 
@@ -60,6 +71,18 @@ private val DAY_SHORT_LABELS = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
 @Composable
 fun AddTaskScreen(taskId: Long?, onBack: () -> Unit, viewModel: AddTaskViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    var canScheduleExact by remember { mutableStateOf(ReminderPermissions.canScheduleExactAlarms(context)) }
+
+    // The exact alarm permission is granted in system settings, so it is checked again on return
+    LifecycleResumeEffect(Unit) {
+        canScheduleExact = ReminderPermissions.canScheduleExactAlarms(context)
+        onPauseOrDispose { }
+    }
+
     val goBack = {
         viewModel.resetForm()
         onBack()
@@ -77,9 +100,24 @@ fun AddTaskScreen(taskId: Long?, onBack: () -> Unit, viewModel: AddTaskViewModel
         onTitleChange = viewModel::onTitleChange,
         onCategoryChange = viewModel::onCategoryChange,
         onDayToggle = viewModel::onDayToggle,
-        onTimeChange = viewModel::onTimeChange,
+        onTimeChange = { minutes ->
+            viewModel.onTimeChange(minutes)
+            if (minutes != null && !ReminderPermissions.hasNotificationPermission(context)) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        },
+        showExactAlarmNotice = uiState.timeMinutes != null && !canScheduleExact,
+        onAllowExactAlarms = { openExactAlarmSettings(context) },
         onSave = viewModel::saveTask
     )
+}
+
+private fun openExactAlarmSettings(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        context.startActivity(
+            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+        )
+    }
 }
 
 @Composable
@@ -90,6 +128,8 @@ fun AddTaskScreenContent(
     onCategoryChange: (TaskCategory) -> Unit,
     onDayToggle: (Int) -> Unit,
     onTimeChange: (Int?) -> Unit,
+    showExactAlarmNotice: Boolean,
+    onAllowExactAlarms: () -> Unit,
     onSave: () -> Unit
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
@@ -175,6 +215,18 @@ fun AddTaskScreenContent(
                     onClick = { showTimePicker = true },
                     onClear = { onTimeChange(null) }
                 )
+
+                if (showExactAlarmNotice) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Allow exact alarms so the reminder arrives on time.",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = onAllowExactAlarms) { Text("Allow") }
+                    }
+                }
 
                 uiState.errorMessage?.let {
                     Text(
@@ -396,6 +448,8 @@ private fun AddTaskScreenPreview() {
             onCategoryChange = {},
             onDayToggle = {},
             onTimeChange = {},
+            showExactAlarmNotice = false,
+            onAllowExactAlarms = {},
             onSave = {}
         )
     }

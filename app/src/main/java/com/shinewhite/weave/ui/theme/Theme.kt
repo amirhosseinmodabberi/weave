@@ -6,7 +6,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+
+// Exposes the theme actually in use, which can differ from the system theme
+val LocalDarkTheme = staticCompositionLocalOf { false }
 
 @Composable
 fun AppTheme(
@@ -23,5 +28,7 @@ fun AppTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    }
 }

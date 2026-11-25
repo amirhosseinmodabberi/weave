@@ -54,21 +54,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.shinewhite.weave.database.entity.NoteEntity
 import com.shinewhite.weave.database.entity.TaskEntity
+import com.shinewhite.weave.localization.LocalStrings
 import com.shinewhite.weave.ui.theme.Dimens
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 
 private val AUTO_SCROLL_DELAY = 4.seconds
-private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 private val MAX_BAR_HEIGHT = 100.dp
-
-internal fun formatTime(minutes: Int): String {
-    val hour = minutes / 60
-    val displayHour = if (hour % 12 == 0) 12 else hour % 12
-    val suffix = if (hour < 12) "AM" else "PM"
-    return "%d:%02d %s".format(displayHour, minutes % 60, suffix)
-}
 
 @Composable
 internal fun SectionTitle(text: String, modifier: Modifier = Modifier) {
@@ -137,14 +130,15 @@ internal fun TaskActionsMenu(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val strings = LocalStrings.current
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
-            text = { Text("Edit") },
+            text = { Text(strings.edit) },
             leadingIcon = { Icon(imageVector = WeaveIcons.Edit, contentDescription = null) },
             onClick = onEdit
         )
         DropdownMenuItem(
-            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+            text = { Text(strings.delete, color = MaterialTheme.colorScheme.error) },
             leadingIcon = {
                 Icon(
                     imageVector = WeaveIcons.Delete,
@@ -159,17 +153,18 @@ internal fun TaskActionsMenu(
 
 @Composable
 internal fun DeleteTaskDialog(task: TaskEntity, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val strings = LocalStrings.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete task?") },
-        text = { Text("\"${task.title}\" and its progress history will be removed.") },
+        title = { Text(strings.deleteTaskTitle) },
+        text = { Text(strings.deleteTaskMessage(task.title)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(strings.delete, color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(strings.cancel) }
         }
     )
 }
@@ -182,9 +177,10 @@ internal fun TodayCarousel(
     onEdit: (TaskEntity) -> Unit,
     onDelete: (TaskEntity) -> Unit
 ) {
+    val strings = LocalStrings.current
     if (tasks.isEmpty()) {
         EmptyHint(
-            text = "No tasks planned for today.",
+            text = strings.emptyToday,
             modifier = Modifier.padding(horizontal = Dimens.paddingLarge)
         )
         return
@@ -218,7 +214,7 @@ internal fun TodayCarousel(
                         .height(160.dp)
                         .clip(RoundedCornerShape(Dimens.cardCornerRadius))
                         .background(MaterialTheme.colorScheme.primary)
-                        .clickable(onClickLabel = "Task options") { menuOpen = true }
+                        .clickable(onClickLabel = strings.taskOptions) { menuOpen = true }
                         .padding(Dimens.paddingMedium),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -238,7 +234,7 @@ internal fun TodayCarousel(
                         }
                         Spacer(Modifier.width(Dimens.paddingSmall))
                         Text(
-                            text = task.category.displayName(),
+                            text = strings.categoryName(task.category),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
@@ -254,7 +250,7 @@ internal fun TodayCarousel(
                         )
                         task.timeMinutes?.let {
                             Text(
-                                text = formatTime(it),
+                                text = strings.formatTime(it),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
@@ -287,7 +283,7 @@ internal fun TodayCarousel(
                 TaskCheckbox(done = done)
                 Spacer(Modifier.width(Dimens.paddingSmall))
                 Text(
-                    text = if (done) "Done" else "Mark as done",
+                    text = if (done) strings.done else strings.markAsDone,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -304,8 +300,9 @@ internal fun WeekTable(
     onDelete: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalStrings.current
     if (state.tasks.isEmpty()) {
-        EmptyHint("Your weekly plan is empty.", modifier)
+        EmptyHint(strings.emptyWeek, modifier)
         return
     }
 
@@ -313,7 +310,7 @@ internal fun WeekTable(
         Column(modifier = Modifier.padding(Dimens.paddingSmall)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(3f))
-                DAY_LABELS.forEachIndexed { index, label ->
+                strings.dayLetters.forEachIndexed { index, label ->
                     val isToday = index == state.todayIndex
                     Text(
                         text = label,
@@ -340,7 +337,7 @@ internal fun WeekTable(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(44.dp)
-                                    .clickable(onClickLabel = "Task options") { menuOpen = true },
+                                    .clickable(onClickLabel = strings.taskOptions) { menuOpen = true },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -371,7 +368,7 @@ internal fun WeekTable(
                                 }
                             )
                         }
-                        DAY_LABELS.indices.forEach { index ->
+                        strings.dayLetters.indices.forEach { index ->
                             val epochDay = state.weekStart + index
                             val active = task.isActiveOn(index)
                             val editable = active && epochDay <= state.todayEpochDay
@@ -425,8 +422,9 @@ internal fun TodayChecklist(
     onDelete: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalStrings.current
     if (state.todayTasks.isEmpty()) {
-        EmptyHint("Nothing to check off today.", modifier)
+        EmptyHint(strings.emptyChecklist, modifier)
         return
     }
 
@@ -460,7 +458,7 @@ internal fun TodayChecklist(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(Dimens.buttonHeight)
-                                    .clickable(onClickLabel = "Task options") { menuOpen = true }
+                                    .clickable(onClickLabel = strings.taskOptions) { menuOpen = true }
                                     .padding(horizontal = Dimens.paddingSmall),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -477,7 +475,7 @@ internal fun TodayChecklist(
                                     )
                                     task.timeMinutes?.let {
                                         Text(
-                                            text = formatTime(it),
+                                            text = strings.formatTime(it),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -510,6 +508,7 @@ internal fun NotesSection(
     onAddNote: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalStrings.current
     var draft by remember { mutableStateOf("") }
 
     SectionCard(modifier) {
@@ -519,7 +518,7 @@ internal fun NotesSection(
         ) {
             if (notes.isEmpty()) {
                 Text(
-                    text = "No notes for today.",
+                    text = strings.emptyNotes,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -541,7 +540,7 @@ internal fun NotesSection(
                     value = draft,
                     onValueChange = { draft = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Write a note") },
+                    placeholder = { Text(strings.writeNote) },
                     singleLine = true
                 )
                 Spacer(Modifier.width(Dimens.paddingSmall))
@@ -552,7 +551,7 @@ internal fun NotesSection(
                     },
                     enabled = draft.isNotBlank()
                 ) {
-                    Text("Add")
+                    Text(strings.add)
                 }
             }
         }
@@ -561,6 +560,7 @@ internal fun NotesSection(
 
 @Composable
 internal fun DailyProgressCard(done: Int, total: Int, modifier: Modifier = Modifier) {
+    val strings = LocalStrings.current
     val fraction = if (total == 0) 0f else done / total.toFloat()
     val percent = (fraction * 100).roundToInt()
     val doneColor = MaterialTheme.colorScheme.tertiary
@@ -574,7 +574,7 @@ internal fun DailyProgressCard(done: Int, total: Int, modifier: Modifier = Modif
             Canvas(
                 modifier = Modifier
                     .size(104.dp)
-                    .semantics { contentDescription = "$percent percent of today's tasks completed" }
+                    .semantics { contentDescription = strings.progressDescription(percent) }
             ) {
                 drawArc(color = remainderColor, startAngle = 0f, sweepAngle = 360f, useCenter = true)
                 if (fraction > 0f) {
@@ -589,13 +589,13 @@ internal fun DailyProgressCard(done: Int, total: Int, modifier: Modifier = Modif
             Spacer(Modifier.width(Dimens.paddingLarge))
             Column {
                 Text(
-                    text = "$percent%",
+                    text = strings.percent(percent),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "$done of $total tasks done today",
+                    text = strings.tasksDoneToday(done, total),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -606,6 +606,7 @@ internal fun DailyProgressCard(done: Int, total: Int, modifier: Modifier = Modif
 
 @Composable
 internal fun WeeklyStatsCard(counts: List<Int>, todayIndex: Int, modifier: Modifier = Modifier) {
+    val strings = LocalStrings.current
     val maxCount = counts.maxOrNull()?.coerceAtLeast(1) ?: 1
 
     SectionCard(modifier) {
@@ -614,7 +615,7 @@ internal fun WeeklyStatsCard(counts: List<Int>, todayIndex: Int, modifier: Modif
             verticalArrangement = Arrangement.spacedBy(Dimens.paddingSmall)
         ) {
             Text(
-                text = "${counts.sum()} tasks completed this week",
+                text = strings.tasksCompletedThisWeek(counts.sum()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -630,7 +631,7 @@ internal fun WeeklyStatsCard(counts: List<Int>, todayIndex: Int, modifier: Modif
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .semantics { contentDescription = "${DAY_LABELS[index]}: $count completed" },
+                            .semantics { contentDescription = strings.dayCompletedDescription(index, count) },
                         verticalArrangement = Arrangement.Bottom,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -648,7 +649,7 @@ internal fun WeeklyStatsCard(counts: List<Int>, todayIndex: Int, modifier: Modif
                                 )
                         )
                         Text(
-                            text = DAY_LABELS[index],
+                            text = strings.dayLetters[index],
                             modifier = Modifier.padding(top = Dimens.paddingExtraSmall),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

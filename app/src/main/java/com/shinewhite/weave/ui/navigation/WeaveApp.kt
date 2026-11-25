@@ -14,13 +14,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.shinewhite.weave.ui.screens.AddTaskScreen
 import com.shinewhite.weave.ui.screens.HomeScreen
+import com.shinewhite.weave.ui.screens.SettingsScreen
 import com.shinewhite.weave.ui.splash.SplashAnimationState
 import com.shinewhite.weave.ui.splash.SplashScreen
 import com.shinewhite.weave.ui.splash.blurredFade
 
 enum class Destination {
     HOME,
-    TASK_FORM
+    TASK_FORM,
+    SETTINGS
 }
 
 @Composable
@@ -61,11 +63,16 @@ fun WeaveApp() {
                     onEditTask = { taskId ->
                         editingTaskId = taskId
                         destination = Destination.TASK_FORM
-                    }
+                    },
+                    onSettingsClick = { destination = Destination.SETTINGS }
                 )
 
                 Destination.TASK_FORM -> AddTaskScreen(
                     taskId = editingTaskId,
+                    onBack = { destination = Destination.HOME }
+                )
+
+                Destination.SETTINGS -> SettingsScreen(
                     onBack = { destination = Destination.HOME }
                 )
             }

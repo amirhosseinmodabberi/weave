@@ -9,13 +9,14 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 import com.shinewhite.weave.database.entity.TaskCategory
 
-private fun strokeIcon(name: String, vararg paths: String): ImageVector =
+private fun strokeIcon(name: String, vararg paths: String, autoMirror: Boolean = false): ImageVector =
     ImageVector.Builder(
         name = name,
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
         viewportWidth = 24f,
-        viewportHeight = 24f
+        viewportHeight = 24f,
+        autoMirror = autoMirror
     ).apply {
         paths.forEach { data ->
             addPath(
@@ -31,7 +32,16 @@ private fun strokeIcon(name: String, vararg paths: String): ImageVector =
 object WeaveIcons {
     val Check = strokeIcon("Check", "M5 12l5 5 9-10")
     val Plus = strokeIcon("Plus", "M12 5v14M5 12h14")
-    val Back = strokeIcon("Back", "M15 5l-7 7 7 7")
+    val Settings = strokeIcon(
+        "Settings",
+        "M4 7h8",
+        "M16 7h4",
+        "M12 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0",
+        "M4 17h4",
+        "M12 17h8",
+        "M8 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0"
+    )
+    val Back = strokeIcon("Back", "M15 5l-7 7 7 7", autoMirror = true)
     val ChevronDown = strokeIcon("ChevronDown", "M6 9l6 6 6-6")
     val Clock = strokeIcon("Clock", "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0", "M12 7v5l3 2")
     val Edit = strokeIcon("Edit", "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z", "M13.5 6.5l4 4")

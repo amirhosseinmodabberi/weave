@@ -1,9 +1,9 @@
 package com.shinewhite.weave.ui.splash
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.shinewhite.weave.ui.theme.LocalDarkTheme
 
 @Immutable
 data class SplashPalette(
@@ -19,7 +19,7 @@ object SplashColors {
 }
 
 @Composable
-fun splashPalette(darkTheme: Boolean = isSystemInDarkTheme()): SplashPalette =
+fun splashPalette(darkTheme: Boolean = LocalDarkTheme.current): SplashPalette =
     if (darkTheme) {
         SplashPalette(background = SplashColors.DarkBackground, logo = SplashColors.DarkLogo)
     } else {

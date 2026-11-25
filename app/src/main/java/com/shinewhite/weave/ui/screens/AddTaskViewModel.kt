@@ -42,7 +42,7 @@ class AddTaskViewModel @Inject constructor(
         val current = _uiState.value
         if (!current.canSave) return
 
-        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+        _uiState.update { it.copy(isSaving = true, error = null) }
 
         viewModelScope.launch {
             val task = TaskEntity(
@@ -61,7 +61,7 @@ class AddTaskViewModel @Inject constructor(
                 .onSuccess { _uiState.update { state -> state.copy(isSaving = false, isSaved = true) } }
                 .onFailure {
                     _uiState.update { state ->
-                        state.copy(isSaving = false, errorMessage = "Could not save the task")
+                        state.copy(isSaving = false, error = AddTaskError.SAVE_FAILED)
                     }
                 }
         }
@@ -84,7 +84,7 @@ class AddTaskViewModel @Inject constructor(
                     }
                 }
                 .onFailure {
-                    _uiState.update { state -> state.copy(errorMessage = "Could not load the task") }
+                    _uiState.update { state -> state.copy(error = AddTaskError.LOAD_FAILED) }
                 }
         }
     }
@@ -103,8 +103,13 @@ data class AddTaskUiState(
     val editingTaskId: Long? = null,
     val isSaving: Boolean = false,
     val isSaved: Boolean = false,
-    val errorMessage: String? = null
+    val error: AddTaskError? = null
 ) {
     val isEditing: Boolean get() = editingTaskId != null
     val canSave: Boolean get() = title.isNotBlank() && activeDaysMask != 0 && !isSaving
+}
+
+enum class AddTaskError {
+    SAVE_FAILED,
+    LOAD_FAILED
 }

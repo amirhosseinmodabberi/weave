@@ -10,6 +10,9 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.shinewhite.weave.R
+import com.shinewhite.weave.localization.AppStrings
+import com.shinewhite.weave.localization.stringsFor
+import com.shinewhite.weave.settings.SettingsRepository
 
 object ReminderNotifier {
     private const val CHANNEL_ID = "task_reminders"
@@ -18,7 +21,8 @@ object ReminderNotifier {
     fun show(context: Context, taskId: Long, title: String, timeMinutes: Int) {
         if (!ReminderPermissions.hasNotificationPermission(context)) return
 
-        createChannel(context)
+        val strings = stringsFor(SettingsRepository.readLanguage(context))
+        createChannel(context, strings)
 
         val launchIntent = context.packageManager
             .getLaunchIntentForPackage(context.packageName)
@@ -35,7 +39,7 @@ object ReminderNotifier {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
-            .setContentText("Scheduled for ${formatTime(timeMinutes)}")
+            .setContentText(strings.reminderText(strings.formatTime(timeMinutes)))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -45,21 +49,14 @@ object ReminderNotifier {
         NotificationManagerCompat.from(context).notify(taskId.toInt(), notification)
     }
 
-    private fun createChannel(context: Context) {
+    private fun createChannel(context: Context, strings: AppStrings) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Task reminders",
+            strings.reminderChannelName,
             NotificationManager.IMPORTANCE_HIGH
-        ).apply { description = "Reminders at the time of your planned tasks" }
+        ).apply { description = strings.reminderChannelDescription }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
-    private fun formatTime(minutes: Int): String {
-        val hour = minutes / 60
-        val displayHour = if (hour % 12 == 0) 12 else hour % 12
-        val suffix = if (hour < 12) "AM" else "PM"
-        return "%d:%02d %s".format(displayHour, minutes % 60, suffix)
     }
 }

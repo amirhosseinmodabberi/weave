@@ -44,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,20 +54,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shinewhite.weave.database.entity.TaskCategory
+import com.shinewhite.weave.localization.LocalStrings
+import com.shinewhite.weave.localization.PersianStrings
 import com.shinewhite.weave.reminder.ReminderPermissions
 import com.shinewhite.weave.ui.theme.AppTheme
 import com.shinewhite.weave.ui.theme.Dimens
-
-private val DAY_SHORT_LABELS = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
 
 @Composable
 fun AddTaskScreen(taskId: Long?, onBack: () -> Unit, viewModel: AddTaskViewModel = viewModel()) {
@@ -132,6 +135,7 @@ fun AddTaskScreenContent(
     onAllowExactAlarms: () -> Unit,
     onSave: () -> Unit
 ) {
+    val strings = LocalStrings.current
     var showTimePicker by remember { mutableStateOf(false) }
 
     if (showTimePicker) {
@@ -157,12 +161,12 @@ fun AddTaskScreenContent(
                 IconButton(onClick = onBack, modifier = Modifier.size(Dimens.minTouchTarget)) {
                     Icon(
                         imageVector = WeaveIcons.Back,
-                        contentDescription = "Back",
+                        contentDescription = strings.back,
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
-                    text = if (uiState.isEditing) "Edit task" else "New task",
+                    text = if (uiState.isEditing) strings.editTask else strings.newTask,
                     modifier = Modifier.padding(start = Dimens.paddingSmall),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground
@@ -180,8 +184,8 @@ fun AddTaskScreenContent(
                     value = uiState.title,
                     onValueChange = onTitleChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Title") },
-                    placeholder = { Text("What do you want to do?") },
+                    label = { Text(strings.title) },
+                    placeholder = { Text(strings.titlePlaceholder) },
                     singleLine = true
                 )
 
@@ -192,7 +196,7 @@ fun AddTaskScreenContent(
 
                 Column(verticalArrangement = Arrangement.spacedBy(Dimens.paddingSmall)) {
                     Text(
-                        text = "Repeat on",
+                        text = strings.repeatOn,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -200,7 +204,7 @@ fun AddTaskScreenContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DAY_SHORT_LABELS.forEachIndexed { index, label ->
+                        strings.dayLetters.forEachIndexed { index, label ->
                             DayChip(
                                 label = label,
                                 selected = (uiState.activeDaysMask and (1 shl index)) != 0,
@@ -219,18 +223,21 @@ fun AddTaskScreenContent(
                 if (showExactAlarmNotice) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Allow exact alarms so the reminder arrives on time.",
+                            text = strings.allowExactAlarms,
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        TextButton(onClick = onAllowExactAlarms) { Text("Allow") }
+                        TextButton(onClick = onAllowExactAlarms) { Text(strings.allow) }
                     }
                 }
 
-                uiState.errorMessage?.let {
+                uiState.error?.let { error ->
                     Text(
-                        text = it,
+                        text = when (error) {
+                            AddTaskError.SAVE_FAILED -> strings.couldNotSave
+                            AddTaskError.LOAD_FAILED -> strings.couldNotLoad
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -247,9 +254,9 @@ fun AddTaskScreenContent(
             ) {
                 Text(
                     when {
-                        uiState.isSaving -> "Saving..."
-                        uiState.isEditing -> "Save changes"
-                        else -> "Save task"
+                        uiState.isSaving -> strings.saving
+                        uiState.isEditing -> strings.saveChanges
+                        else -> strings.saveTask
                     }
                 )
             }
@@ -260,11 +267,12 @@ fun AddTaskScreenContent(
 
 @Composable
 private fun CategoryDropdown(selected: TaskCategory, onSelected: (TaskCategory) -> Unit) {
+    val strings = LocalStrings.current
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.paddingSmall)) {
         Text(
-            text = "Category",
+            text = strings.category,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -293,7 +301,7 @@ private fun CategoryDropdown(selected: TaskCategory, onSelected: (TaskCategory) 
                     tint = MaterialTheme.colorScheme.secondary
                 )
                 Text(
-                    text = selected.displayName(),
+                    text = strings.categoryName(selected),
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = Dimens.paddingMedium),
@@ -309,7 +317,7 @@ private fun CategoryDropdown(selected: TaskCategory, onSelected: (TaskCategory) 
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 TaskCategory.entries.forEach { category ->
                     DropdownMenuItem(
-                        text = { Text(category.displayName()) },
+                        text = { Text(strings.categoryName(category)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = WeaveIcons.forCategory(category),
@@ -329,11 +337,12 @@ private fun CategoryDropdown(selected: TaskCategory, onSelected: (TaskCategory) 
 
 @Composable
 private fun TimeField(timeMinutes: Int?, onClick: () -> Unit, onClear: () -> Unit) {
+    val strings = LocalStrings.current
     val shape = RoundedCornerShape(Dimens.cornerRadius)
 
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.paddingSmall)) {
         Text(
-            text = "Time (optional)",
+            text = strings.timeOptional,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -354,7 +363,7 @@ private fun TimeField(timeMinutes: Int?, onClick: () -> Unit, onClear: () -> Uni
                     tint = MaterialTheme.colorScheme.secondary
                 )
                 Text(
-                    text = timeMinutes?.let { formatTime(it) } ?: "No time set",
+                    text = timeMinutes?.let { strings.formatTime(it) } ?: strings.noTimeSet,
                     modifier = Modifier.padding(start = Dimens.paddingMedium),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (timeMinutes == null) {
@@ -365,7 +374,7 @@ private fun TimeField(timeMinutes: Int?, onClick: () -> Unit, onClear: () -> Uni
                 )
             }
             if (timeMinutes != null) {
-                TextButton(onClick = onClear) { Text("Clear") }
+                TextButton(onClick = onClear) { Text(strings.clear) }
             }
         }
     }
@@ -374,6 +383,7 @@ private fun TimeField(timeMinutes: Int?, onClick: () -> Unit, onClear: () -> Uni
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimePickerDialog(initialMinutes: Int?, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
+    val strings = LocalStrings.current
     val initial = initialMinutes ?: (9 * 60)
     val pickerState = rememberTimePickerState(
         initialHour = initial / 60,
@@ -385,11 +395,11 @@ private fun TimePickerDialog(initialMinutes: Int?, onConfirm: (Int) -> Unit, onD
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = { onConfirm(pickerState.hour * 60 + pickerState.minute) }) {
-                Text("OK")
+                Text(strings.ok)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(strings.cancel) }
         },
         text = { TimePicker(state = pickerState) }
     )
@@ -452,5 +462,33 @@ private fun AddTaskScreenPreview() {
             onAllowExactAlarms = {},
             onSave = {}
         )
+    }
+}
+
+@Preview(name = "Persian RTL", showBackground = true, heightDp = 800)
+@Composable
+private fun AddTaskScreenPersianPreview() {
+    AppTheme {
+        CompositionLocalProvider(
+            LocalStrings provides PersianStrings,
+            LocalLayoutDirection provides LayoutDirection.Rtl
+        ) {
+            AddTaskScreenContent(
+                uiState = AddTaskUiState(
+                    title = "تمرین باشگاه",
+                    category = TaskCategory.GYM,
+                    activeDaysMask = 0b0010101,
+                    timeMinutes = 15 * 60 + 15
+                ),
+                onBack = {},
+                onTitleChange = {},
+                onCategoryChange = {},
+                onDayToggle = {},
+                onTimeChange = {},
+                showExactAlarmNotice = false,
+                onAllowExactAlarms = {},
+                onSave = {}
+            )
+        }
     }
 }

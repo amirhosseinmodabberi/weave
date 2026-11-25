@@ -2,6 +2,7 @@ package com.shinewhite.weave.ui.splash
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -102,7 +103,7 @@ private fun SplashScreenCompletePreview() {
     SplashContent(
         backgroundAlpha = { 1f },
         drawProgress = { 1f },
-        palette = splashPalette()
+        palette = splashPalette(darkTheme = isSystemInDarkTheme())
     )
 }
 
@@ -112,6 +113,6 @@ private fun SplashScreenWritingPreview() {
     SplashContent(
         backgroundAlpha = { 1f },
         drawProgress = { 0.55f },
-        palette = splashPalette()
+        palette = splashPalette(darkTheme = isSystemInDarkTheme())
     )
 }

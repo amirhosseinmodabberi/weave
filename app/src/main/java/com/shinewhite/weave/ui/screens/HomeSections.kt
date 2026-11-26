@@ -1,5 +1,8 @@
 package com.shinewhite.weave.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import com.shinewhite.weave.database.entity.NoteEntity
 import com.shinewhite.weave.database.entity.TaskEntity
 import com.shinewhite.weave.localization.LocalStrings
+import com.shinewhite.weave.ui.screens.HomeUiState
+import com.shinewhite.weave.ui.screens.WeaveIcons
 import com.shinewhite.weave.ui.theme.Dimens
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -198,96 +205,142 @@ internal fun TodayCarousel(
         }
     }
 
-    HorizontalPager(
-        state = pagerState,
-        contentPadding = PaddingValues(horizontal = Dimens.paddingLarge),
-        pageSpacing = Dimens.paddingMedium
-    ) { page ->
-        val task = tasks[page]
-        val done = isDone(task)
-        var menuOpen by remember { mutableStateOf(false) }
-        Column {
-            Box {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(Dimens.cardCornerRadius))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable(onClickLabel = strings.taskOptions) { menuOpen = true }
-                        .padding(Dimens.paddingMedium),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(Dimens.cornerRadius))
-                                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = WeaveIcons.forCategory(task.category),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                        Spacer(Modifier.width(Dimens.paddingSmall))
-                        Text(
-                            text = strings.categoryName(task.category),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        task.timeMinutes?.let {
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = Dimens.paddingLarge),
+            pageSpacing = Dimens.paddingMedium
+        ) { page ->
+            val task = tasks[page]
+            val done = isDone(task)
+            var menuOpen by remember { mutableStateOf(false) }
+            Column {
+                Box {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(Dimens.cardCornerRadius))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(onClickLabel = strings.taskOptions) { menuOpen = true }
+                            .padding(Dimens.paddingMedium),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(Dimens.cornerRadius))
+                                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = WeaveIcons.forCategory(task.category),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                            Spacer(Modifier.width(Dimens.paddingSmall))
                             Text(
-                                text = strings.formatTime(it),
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = strings.categoryName(task.category),
+                                style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
+                        Column {
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            task.timeMinutes?.let {
+                                Text(
+                                    text = strings.formatTime(it),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
                     }
+                    TaskActionsMenu(
+                        expanded = menuOpen,
+                        onDismiss = { menuOpen = false },
+                        onEdit = {
+                            menuOpen = false
+                            onEdit(task)
+                        },
+                        onDelete = {
+                            menuOpen = false
+                            onDelete(task)
+                        }
+                    )
                 }
-                TaskActionsMenu(
-                    expanded = menuOpen,
-                    onDismiss = { menuOpen = false },
-                    onEdit = {
-                        menuOpen = false
-                        onEdit(task)
-                    },
-                    onDelete = {
-                        menuOpen = false
-                        onDelete(task)
-                    }
-                )
+                Row(
+                    modifier = Modifier
+                        .height(Dimens.minTouchTarget)
+                        .toggleable(
+                            value = done,
+                            onValueChange = { onToggle(task, it) },
+                            role = Role.Checkbox
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TaskCheckbox(done = done)
+                    Spacer(Modifier.width(Dimens.paddingSmall))
+                    Text(
+                        text = if (done) strings.done else strings.markAsDone,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             }
-            Row(
+        }
+
+        if (tasks.size > 1) {
+            PagerDots(
+                pageCount = tasks.size,
+                currentPage = pagerState.currentPage,
                 modifier = Modifier
-                    .height(Dimens.minTouchTarget)
-                    .toggleable(
-                        value = done,
-                        onValueChange = { onToggle(task, it) },
-                        role = Role.Checkbox
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TaskCheckbox(done = done)
-                Spacer(Modifier.width(Dimens.paddingSmall))
-                Text(
-                    text = if (done) strings.done else strings.markAsDone,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = Dimens.paddingSmall)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PagerDots(pageCount: Int, currentPage: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(pageCount) { index ->
+            val selected = index == currentPage
+            val color by animateColorAsState(
+                targetValue = if (selected) {
+                    MaterialTheme.colorScheme.secondary
+                } else {
+                    MaterialTheme.colorScheme.outline
+                },
+                animationSpec = tween(durationMillis = 300),
+                label = "dotColor"
+            )
+            val dotScale by animateFloatAsState(
+                targetValue = if (selected) 1.3f else 1f,
+                animationSpec = tween(durationMillis = 300),
+                label = "dotScale"
+            )
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .scale(dotScale)
+                    .clip(CircleShape)
+                    .background(color)
+            )
         }
     }
 }
@@ -437,7 +490,7 @@ internal fun TodayChecklist(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(Dimens.buttonHeight)
+                            .heightIn(min = Dimens.buttonHeight)
                             .padding(start = Dimens.paddingSmall),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -457,9 +510,9 @@ internal fun TodayChecklist(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(Dimens.buttonHeight)
+                                    .heightIn(min = Dimens.buttonHeight)
                                     .clickable(onClickLabel = strings.taskOptions) { menuOpen = true }
-                                    .padding(horizontal = Dimens.paddingSmall),
+                                    .padding(horizontal = Dimens.paddingSmall, vertical = Dimens.paddingSmall),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {

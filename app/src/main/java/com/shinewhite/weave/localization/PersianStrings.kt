@@ -4,9 +4,9 @@ import com.shinewhite.weave.database.entity.TaskCategory
 import java.util.Calendar
 
 object PersianStrings : AppStrings {
-    private val months = listOf(
-        "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
-        "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
+    private val jalaliMonths = listOf(
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
     )
 
     private fun digits(text: String): String = text.map { char ->
@@ -19,8 +19,10 @@ object PersianStrings : AppStrings {
         else -> "شب بخیر"
     }
 
-    override fun dateLabel(calendar: Calendar): String =
-        "${dayNames[calendar.mondayBasedDayIndex()]}، ${number(calendar.get(Calendar.DAY_OF_MONTH))} ${months[calendar.get(Calendar.MONTH)]}"
+    override fun dateLabel(calendar: Calendar): String {
+        val date = JalaliDate.fromCalendar(calendar)
+        return "${dayNames[calendar.mondayBasedDayIndex()]}، ${number(date.day)} ${jalaliMonths[date.month - 1]}"
+    }
 
     override val emptyToday = "برای امروز کاری برنامه‌ریزی نشده است."
     override val emptyWeek = "برنامه هفتگی شما خالی است."
